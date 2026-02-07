@@ -193,10 +193,12 @@ tail -f ron.log
 
 ## Support
 
-For issues or suggestions, check the logs and verify:
+For issues, check the logs and verify:
 1. DISCORD_TOKEN is valid
 2. Bot has required intents enabled
 3. Network connection is stable
+
+For Suggestions, open an issue or submit a pull request.
 
 ---
 
