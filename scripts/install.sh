@@ -3,17 +3,15 @@ set -euo pipefail
 
 # Merged installer for Ron Bot
 # Combines install_all.sh, install_man.sh, and install_systemd_user.sh
-# Usage: ./install.sh [-f|--force] [--no-symlinks] [--no-desktop] [--skip-venv] [--skip-systemd] [--enable-linger]
+# Usage: ./install.sh [-f|--force] [--no-symlinks] [--no-desktop] [--skip-venv] [--enable-linger]
 # -f, --force: non-interactive (assume yes)
 # --no-symlinks: don't install global symlinks (/usr/local/bin)
 # --skip-venv: skip virtualenv creation and pip install
-# --skip-systemd: skip systemd --user service installation
 # --enable-linger: enable systemd linger for user
 
 FORCE=0
 SYMLINKS=1
 SKIP_VENV=0
-SKIP_SYSTEMD=0
 ENABLE_LINGER=0
 
 while [ $# -gt 0 ]; do
@@ -21,9 +19,8 @@ while [ $# -gt 0 ]; do
     -f|--force) FORCE=1; shift ;;
     --no-symlinks) SYMLINKS=0; shift ;;
     --skip-venv) SKIP_VENV=1; shift ;;
-    --skip-systemd) SKIP_SYSTEMD=1; shift ;;
     --enable-linger) ENABLE_LINGER=1; shift ;;
-    -h|--help) echo "Usage: $0 [-f|--force] [--no-symlinks] [--skip-venv] [--skip-systemd] [--enable-linger]"; exit 0 ;;
+    -h|--help) echo "Usage: $0 [-f|--force] [--no-symlinks] [--skip-venv] [--enable-linger]"; exit 0 ;;
     *) echo "Unknown argument: $1"; exit 1 ;;
   esac
 done
@@ -192,15 +189,14 @@ else
 fi
 
 # ==== SYSTEMD --USER SERVICE ====
-if [ "$SKIP_SYSTEMD" -eq 0 ]; then
-  echo "Installing systemd --user service..."
-  if command -v systemctl >/dev/null 2>&1; then
-    UNIT_DIR="$HOME/.config/systemd/user"
-    UNIT_FILE="$UNIT_DIR/ron.service"
+echo "Installing systemd --user service..."
+if command -v systemctl >/dev/null 2>&1; then
+  UNIT_DIR="$HOME/.config/systemd/user"
+  UNIT_FILE="$UNIT_DIR/ron.service"
 
-    mkdir -p "$UNIT_DIR"
+  mkdir -p "$UNIT_DIR"
 
-    cat > "$UNIT_FILE" <<EOF
+  cat > "$UNIT_FILE" <<EOF
 [Unit]
 Description=Ron Bot (weather and wellness)
 After=network.target
@@ -222,41 +218,40 @@ SyslogIdentifier=ron-bot
 WantedBy=default.target
 EOF
 
-    echo "Installed systemd user unit to $UNIT_FILE"
+  echo "Installed systemd user unit to $UNIT_FILE"
 
-    # Reload and enable
-    systemctl --user daemon-reload
-    systemctl --user enable --now ron.service
+  # Reload and enable
+  systemctl --user daemon-reload
+  systemctl --user enable --now ron.service
 
-    if [ $? -eq 0 ]; then
-      echo "ron.service enabled and started (systemd --user)."
-    else
-      echo "Failed to enable/start ron.service; check 'systemctl --user status ron.service' for details." >&2
-    fi
-
-    if [ "$ENABLE_LINGER" -eq 1 ]; then
-      if command -v loginctl >/dev/null 2>&1; then
-        if [ "$FORCE" -eq 1 ]; then
-          sudo loginctl enable-linger "$USER" 2>/dev/null || true
-          echo "Enabled linger for $USER (sudo used)."
-        else
-          echo "Enable linger for $USER to allow services to run without active login? (y/N)"
-          read -r ans
-          case "$ans" in
-            [Yy]|[Yy][Ee][Ss])
-              sudo loginctl enable-linger "$USER"
-              echo "Enabled linger for $USER"
-              ;;
-            *) echo "Skipped enabling linger" ;;
-          esac
-        fi
-      else
-        echo "loginctl not found; cannot enable linger" >&2
-      fi
-    fi
+  if [ $? -eq 0 ]; then
+    echo "ron.service enabled and started (systemd --user)."
   else
-    echo "systemctl not found; skipping systemd --user service installation" >&2
+    echo "Failed to enable/start ron.service; check 'systemctl --user status ron.service' for details." >&2
   fi
+
+  if [ "$ENABLE_LINGER" -eq 1 ]; then
+    if command -v loginctl >/dev/null 2>&1; then
+      if [ "$FORCE" -eq 1 ]; then
+        sudo loginctl enable-linger "$USER" 2>/dev/null || true
+        echo "Enabled linger for $USER (sudo used)."
+      else
+        echo "Enable linger for $USER to allow services to run without active login? (y/N)"
+        read -r ans
+        case "$ans" in
+          [Yy]|[Yy][Ee][Ss])
+            sudo loginctl enable-linger "$USER"
+            echo "Enabled linger for $USER"
+            ;;
+          *) echo "Skipped enabling linger" ;;
+        esac
+      fi
+    else
+      echo "loginctl not found; cannot enable linger" >&2
+    fi
+  fi
+else
+  echo "systemctl not found; skipping systemd --user service installation" >&2
 fi
 
 # ==== SUMMARY ====
@@ -287,7 +282,7 @@ else
   echo "  ./scripts/stop_ron.sh"
 fi
 echo ""
-if [ "$SKIP_SYSTEMD" -eq 0 ] && command -v systemctl >/dev/null 2>&1; then
+if command -v systemctl >/dev/null 2>&1; then
   echo "To manage systemd service:"
   echo "  systemctl --user status ron.service"
   echo "  systemctl --user start/stop/restart ron.service"
