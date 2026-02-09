@@ -1,38 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Full installer for Ron Bot
-# Usage: ./install_all.sh [-f|--force] [--no-symlinks] [--no-desktop] [--skip-venv] [--install-man]
+# Merged installer for Ron Bot
+# Combines install_all.sh, install_man.sh, and install_systemd_user.sh
+# Usage: ./install.sh [-f|--force] [--no-symlinks] [--no-desktop] [--skip-venv] [--skip-man] [--skip-systemd] [--enable-linger]
 # -f, --force: non-interactive (assume yes)
 # --no-symlinks: don't install global symlinks (/usr/local/bin)
-# --no-desktop: don't copy .desktop launcher to Desktop
 # --skip-venv: skip virtualenv creation and pip install
-# --install-man: install man page to /usr/local/share/man/man1
+# --skip-man: skip man page installation
+# --skip-systemd: skip systemd --user service installation
+# --enable-linger: enable systemd linger for user
 
 FORCE=0
 SYMLINKS=1
-DESKTOP=1
 SKIP_VENV=0
-INSTALL_MAN=0
+SKIP_MAN=0
+SKIP_SYSTEMD=0
+ENABLE_LINGER=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     -f|--force) FORCE=1; shift ;;
     --no-symlinks) SYMLINKS=0; shift ;;
-    --no-desktop) DESKTOP=0; shift ;;
     --skip-venv) SKIP_VENV=1; shift ;;
-    --install-man) INSTALL_MAN=1; shift ;;
-    -h|--help) echo "Usage: $0 [-f|--force] [--no-symlinks] [--no-desktop] [--skip-venv] [--install-man]"; exit 0 ;;
+    --skip-man) SKIP_MAN=1; shift ;;
+    --skip-systemd) SKIP_SYSTEMD=1; shift ;;
+    --enable-linger) ENABLE_LINGER=1; shift ;;
+    -h|--help) echo "Usage: $0 [-f|--force] [--no-symlinks] [--skip-venv] [--skip-man] [--skip-systemd] [--enable-linger]"; exit 0 ;;
     *) echo "Unknown argument: $1"; exit 1 ;;
   esac
 done
 
 echo "Starting Ron Bot installer..."
 
-# Resolve script and project root so installer works from any CWD or when invoked via symlink
+# Resolve script and project root
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-# Work in project root
 cd "$PROJECT_ROOT" || true
 
 # Check python3
@@ -44,7 +47,7 @@ fi
 PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
 echo "Using Python $PYTHON_VERSION"
 
-# Create virtualenv and install requirements (in project root)
+# ==== VIRTUALENV & DEPENDENCIES ====
 if [ "$SKIP_VENV" -eq 0 ]; then
   if [ ! -d "$PROJECT_ROOT/.venv" ]; then
     echo "Creating virtualenv..."
@@ -58,7 +61,6 @@ if [ "$SKIP_VENV" -eq 0 ]; then
   . "$PROJECT_ROOT/.venv/bin/activate"
 
   echo "Installing dependencies..."
-  # Bootstrap pip if not available
   python3 -m ensurepip --upgrade 2>/dev/null || true
   python3 -m pip install --upgrade pip
   python3 -m pip install -r "$PROJECT_ROOT/requirements.txt"
@@ -66,14 +68,14 @@ else
   echo "Skipping virtualenv and dependency installation (per --skip-venv)."
 fi
 
-# Make helper scripts executable (scripts/ directory)
-for f in "$SCRIPT_DIR"/run_ron.sh "$SCRIPT_DIR"/stop_ron.sh "$SCRIPT_DIR"/install_systemd_user.sh "$SCRIPT_DIR"/install_man.sh; do
+# Make helper scripts executable
+for f in "$SCRIPT_DIR"/run_ron.sh "$SCRIPT_DIR"/stop_ron.sh "$SCRIPT_DIR"/install_systemd_user.sh; do
   if [ -f "$f" ]; then
     chmod +x "$f"
   fi
 done
 
-# Ensure .env.example exists
+# ==== ENVIRONMENT SETUP ====
 if [ ! -f "$PROJECT_ROOT/.env.example" ]; then
   cat > "$PROJECT_ROOT/.env.example" <<'EOF'
 # Example environment for Ron Bot
@@ -83,7 +85,6 @@ EOF
   echo "Created .env.example"
 fi
 
-# If .env missing, offer to create it from example
 if [ ! -f "$PROJECT_ROOT/.env" ]; then
   if [ "$FORCE" -eq 1 ]; then
     cp "$PROJECT_ROOT/.env.example" "$PROJECT_ROOT/.env"
@@ -112,7 +113,7 @@ else
   echo "Note: .env not found. Create it with your DISCORD_TOKEN if you haven't already."
 fi
 
-# Install symlinks
+# ==== GLOBAL SYMLINKS ====
 if [ "$SYMLINKS" -eq 1 ]; then
   echo "Installing global symlinks..."
   for name in ron-start ron-stop ron-status; do
@@ -150,19 +151,120 @@ if [ "$SYMLINKS" -eq 1 ]; then
   done
 fi
 
-# Install man page
-if [ "$INSTALL_MAN" -eq 1 ]; then
+# ==== MAN PAGE ====
+if [ "$SKIP_MAN" -eq 0 ]; then
   echo "Installing man page..."
-  if [ -x "$SCRIPT_DIR/install_man.sh" ]; then
-    if [ "$FORCE" -eq 1 ]; then
-      "$SCRIPT_DIR/install_man.sh" -f
-    else
-      "$SCRIPT_DIR/install_man.sh"
+  MAN_SOURCE="$PROJECT_ROOT/ron.1"
+  MAN_DIR="/usr/local/share/man/man1"
+  MAN_FILE="$MAN_DIR/ron.1"
+
+  if [ -f "$MAN_SOURCE" ]; then
+    if [ ! -d "$MAN_DIR" ]; then
+      echo "Creating man directory: $MAN_DIR"
+      sudo mkdir -p "$MAN_DIR" || {
+        echo "Error: Could not create $MAN_DIR" >&2
+        exit 1
+      }
     fi
+
+    if [ -w "$MAN_DIR" ]; then
+      cp "$MAN_SOURCE" "$MAN_FILE"
+      echo "Installed man page to $MAN_FILE"
+    else
+      if [ "$FORCE" -eq 1 ]; then
+        sudo cp "$MAN_SOURCE" "$MAN_FILE"
+        echo "Installed man page to $MAN_FILE (sudo used)"
+      else
+        echo "Installing to $MAN_DIR requires sudo."
+        read -r -p "Proceed? (y/N) " answer
+        case "$answer" in
+          [Yy]|[Yy][Ee][Ss])
+            sudo cp "$MAN_SOURCE" "$MAN_FILE"
+            echo "Installed man page to $MAN_FILE"
+            ;;
+          *) echo "Skipped man page installation" ;;
+        esac
+      fi
+    fi
+
+    if command -v mandb >/dev/null 2>&1; then
+      echo "Updating man database..."
+      mandb 2>/dev/null || true
+    fi
+  else
+    echo "Warning: ron.1 man page not found at $MAN_SOURCE"
   fi
 fi
 
-# Summary
+# ==== SYSTEMD --USER SERVICE ====
+if [ "$SKIP_SYSTEMD" -eq 0 ]; then
+  echo "Installing systemd --user service..."
+  if command -v systemctl >/dev/null 2>&1; then
+    UNIT_DIR="$HOME/.config/systemd/user"
+    UNIT_FILE="$UNIT_DIR/ron.service"
+
+    mkdir -p "$UNIT_DIR"
+
+    cat > "$UNIT_FILE" <<EOF
+[Unit]
+Description=Ron Bot (weather and wellness)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=$PROJECT_ROOT
+ExecStart=$SCRIPT_DIR/run_ron.sh -f
+# Load environment from .env if present
+EnvironmentFile=$PROJECT_ROOT/.env
+Restart=on-failure
+RestartSec=5
+# Capture output to journal
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ron-bot
+
+[Install]
+WantedBy=default.target
+EOF
+
+    echo "Installed systemd user unit to $UNIT_FILE"
+
+    # Reload and enable
+    systemctl --user daemon-reload
+    systemctl --user enable --now ron.service
+
+    if [ $? -eq 0 ]; then
+      echo "ron.service enabled and started (systemd --user)."
+    else
+      echo "Failed to enable/start ron.service; check 'systemctl --user status ron.service' for details." >&2
+    fi
+
+    if [ "$ENABLE_LINGER" -eq 1 ]; then
+      if command -v loginctl >/dev/null 2>&1; then
+        if [ "$FORCE" -eq 1 ]; then
+          sudo loginctl enable-linger "$USER" 2>/dev/null || true
+          echo "Enabled linger for $USER (sudo used)."
+        else
+          echo "Enable linger for $USER to allow services to run without active login? (y/N)"
+          read -r ans
+          case "$ans" in
+            [Yy]|[Yy][Ee][Ss])
+              sudo loginctl enable-linger "$USER"
+              echo "Enabled linger for $USER"
+              ;;
+            *) echo "Skipped enabling linger" ;;
+          esac
+        fi
+      else
+        echo "loginctl not found; cannot enable linger" >&2
+      fi
+    fi
+  else
+    echo "systemctl not found; skipping systemd --user service installation" >&2
+  fi
+fi
+
+# ==== SUMMARY ====
 echo ""
 echo "Installation complete. Quick setup:"
 if [ -f "$PROJECT_ROOT/.env" ]; then
@@ -190,13 +292,12 @@ else
   echo "  ./scripts/stop_ron.sh"
 fi
 echo ""
-echo "To install systemd --user service:"
-echo "  ./scripts/install_systemd_user.sh"
-echo ""
-echo "To install man page:"
-echo "  ./scripts/install_man.sh"
-echo "  (or re-run this installer with --install-man flag)"
-echo ""
+if [ "$SKIP_SYSTEMD" -eq 0 ] && command -v systemctl >/dev/null 2>&1; then
+  echo "To manage systemd service:"
+  echo "  systemctl --user status ron.service"
+  echo "  systemctl --user start/stop/restart ron.service"
+  echo ""
+fi
 echo "For help in Discord:"
 echo "  !help or /help"
 echo ""
