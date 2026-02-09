@@ -3,18 +3,16 @@ set -euo pipefail
 
 # Merged installer for Ron Bot
 # Combines install_all.sh, install_man.sh, and install_systemd_user.sh
-# Usage: ./install.sh [-f|--force] [--no-symlinks] [--no-desktop] [--skip-venv] [--skip-man] [--skip-systemd] [--enable-linger]
+# Usage: ./install.sh [-f|--force] [--no-symlinks] [--no-desktop] [--skip-venv] [--skip-systemd] [--enable-linger]
 # -f, --force: non-interactive (assume yes)
 # --no-symlinks: don't install global symlinks (/usr/local/bin)
 # --skip-venv: skip virtualenv creation and pip install
-# --skip-man: skip man page installation
 # --skip-systemd: skip systemd --user service installation
 # --enable-linger: enable systemd linger for user
 
 FORCE=0
 SYMLINKS=1
 SKIP_VENV=0
-SKIP_MAN=0
 SKIP_SYSTEMD=0
 ENABLE_LINGER=0
 
@@ -23,10 +21,9 @@ while [ $# -gt 0 ]; do
     -f|--force) FORCE=1; shift ;;
     --no-symlinks) SYMLINKS=0; shift ;;
     --skip-venv) SKIP_VENV=1; shift ;;
-    --skip-man) SKIP_MAN=1; shift ;;
     --skip-systemd) SKIP_SYSTEMD=1; shift ;;
     --enable-linger) ENABLE_LINGER=1; shift ;;
-    -h|--help) echo "Usage: $0 [-f|--force] [--no-symlinks] [--skip-venv] [--skip-man] [--skip-systemd] [--enable-linger]"; exit 0 ;;
+    -h|--help) echo "Usage: $0 [-f|--force] [--no-symlinks] [--skip-venv] [--skip-systemd] [--enable-linger]"; exit 0 ;;
     *) echo "Unknown argument: $1"; exit 1 ;;
   esac
 done
@@ -152,48 +149,46 @@ if [ "$SYMLINKS" -eq 1 ]; then
 fi
 
 # ==== MAN PAGE ====
-if [ "$SKIP_MAN" -eq 0 ]; then
-  echo "Installing man page..."
-  MAN_SOURCE="$PROJECT_ROOT/ron.1"
-  MAN_DIR="/usr/local/share/man/man1"
-  MAN_FILE="$MAN_DIR/ron.1"
+echo "Installing man page..."
+MAN_SOURCE="$PROJECT_ROOT/ron.1"
+MAN_DIR="/usr/local/share/man/man1"
+MAN_FILE="$MAN_DIR/ron.1"
 
-  if [ -f "$MAN_SOURCE" ]; then
-    if [ ! -d "$MAN_DIR" ]; then
-      echo "Creating man directory: $MAN_DIR"
-      sudo mkdir -p "$MAN_DIR" || {
-        echo "Error: Could not create $MAN_DIR" >&2
-        exit 1
-      }
-    fi
-
-    if [ -w "$MAN_DIR" ]; then
-      cp "$MAN_SOURCE" "$MAN_FILE"
-      echo "Installed man page to $MAN_FILE"
-    else
-      if [ "$FORCE" -eq 1 ]; then
-        sudo cp "$MAN_SOURCE" "$MAN_FILE"
-        echo "Installed man page to $MAN_FILE (sudo used)"
-      else
-        echo "Installing to $MAN_DIR requires sudo."
-        read -r -p "Proceed? (y/N) " answer
-        case "$answer" in
-          [Yy]|[Yy][Ee][Ss])
-            sudo cp "$MAN_SOURCE" "$MAN_FILE"
-            echo "Installed man page to $MAN_FILE"
-            ;;
-          *) echo "Skipped man page installation" ;;
-        esac
-      fi
-    fi
-
-    if command -v mandb >/dev/null 2>&1; then
-      echo "Updating man database..."
-      mandb 2>/dev/null || true
-    fi
-  else
-    echo "Warning: ron.1 man page not found at $MAN_SOURCE"
+if [ -f "$MAN_SOURCE" ]; then
+  if [ ! -d "$MAN_DIR" ]; then
+    echo "Creating man directory: $MAN_DIR"
+    sudo mkdir -p "$MAN_DIR" || {
+      echo "Error: Could not create $MAN_DIR" >&2
+      exit 1
+    }
   fi
+
+  if [ -w "$MAN_DIR" ]; then
+    cp "$MAN_SOURCE" "$MAN_FILE"
+    echo "Installed man page to $MAN_FILE"
+  else
+    if [ "$FORCE" -eq 1 ]; then
+      sudo cp "$MAN_SOURCE" "$MAN_FILE"
+      echo "Installed man page to $MAN_FILE (sudo used)"
+    else
+      echo "Installing to $MAN_DIR requires sudo."
+      read -r -p "Proceed? (y/N) " answer
+      case "$answer" in
+        [Yy]|[Yy][Ee][Ss])
+          sudo cp "$MAN_SOURCE" "$MAN_FILE"
+          echo "Installed man page to $MAN_FILE"
+          ;;
+        *) echo "Skipped man page installation" ;;
+      esac
+    fi
+  fi
+
+  if command -v mandb >/dev/null 2>&1; then
+    echo "Updating man database..."
+    mandb 2>/dev/null || true
+  fi
+else
+  echo "Warning: ron.1 man page not found at $MAN_SOURCE"
 fi
 
 # ==== SYSTEMD --USER SERVICE ====
