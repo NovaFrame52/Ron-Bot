@@ -2,7 +2,6 @@ import os
 import json
 import random
 import asyncio
-import requests
 from pathlib import Path
 from dotenv import load_dotenv
 import discord
@@ -67,54 +66,74 @@ QUOTES = [
 # Track users who want water reminders
 WATER_REMINDER_USERS = set()
 
+# Expanded water reminder phrases
+WATER_REMINDER_PHRASES = [
+    "💧 Time to drink some water! Stay hydrated.",
+    "🚰 Hydration check: have a glass of water now!",
+    "💦 Quick reminder: water helps your focus and mood.",
+    "🧊 Take a sip of water and stretch your shoulders.",
+    "🥤 Hydrate! Small sips often beat one large drink.",
+    "💧 Feeling thirsty? Drink up and breathe deeply.",
+    "🍋 Try water with a slice of lemon for a refreshing boost.",
+    "💧 Keep a water bottle nearby — sip frequently!",
+    "🔔 Hydration reminder: 1 glass now, another in an hour!",
+    "💚 Water helps your body and mind — take a drink.",
+    "💧 Quick goal: drink 250ml of water in the next 10 minutes.",
+    "⚡ Boost your energy: stand up and drink some water.",
+]
+
 AFFIRMATIONS = [
     "You are capable of amazing things. 💪",
-    "Your potential is limitless. ✨",
-    "You are stronger than you think. 🌟",
-    "Your effort matters. Every step counts. 👣",
-    "You deserve success and happiness. 🎯",
-    "You are making a positive difference. 💖",
-    "Progress over perfection. You're doing great! 🚀",
-    "Your challenges are opportunities to grow. 🌱",
-    "You are resilient and resourceful. 🏆",
-    "Today is a fresh start to be your best self. ☀️",
-    "You bring value to those around you. 🤝",
-    "Your dreams are worth pursuing. 💭",
+    "Your potential is limitless — keep taking steps. ✨",
+    "You are stronger and kinder than you give yourself credit for. 🌟",
+    "Small progress is still progress. Celebrate it. 🎉",
+    "You deserve rest, joy, and success. 🎯",
+    "Your presence matters to others, even when you doubt it. 💖",
+    "Challenges grow you; you're doing the work. 🌱",
+    "Breathe, reset, continue — you have this. 🧘",
+    "You are resilient, resourceful, and learning daily. 🏆",
+    "Today is a fresh start — be curious and kind. ☀️",
+    "Your actions create ripples — keep going. 🤝",
+    "Dream, plan, act — one step at a time. 💭",
+    "Small acts of self-care compound into big change. 🌿",
+    "You belong and you are enough, exactly as you are. 💚",
 ]
 
 WORKOUT_IDEAS = [
-    "⏱️ **2-Minute Desk Stretch**: Stand, reach arms up, lean left, then right. Great for posture!",
-    "🏃 **10 Jumping Jacks**: Quick cardio boost to get your blood flowing!",
-    "📍 **Wall Push-ups**: Do 10-15 push-ups against a wall. Stronger arms incoming!",
-    "🧘 **5-Minute Walk**: Take a quick walk to refresh your mind and body.",
-    "💪 **Bodyweight Squats**: 15-20 squats with proper form. Leg strength boost!",
-    "🤸 **Plank Hold**: Hold for 30-60 seconds. Core strength is key!",
-    "🏃 **Stairs**: Run up and down stairs 5 times. Great cardio!",
-    "🙏 **Yoga Flow**: 10 minutes of stretching and light yoga. Flexibility FTW!",
-    "👣 **Lunges**: 10 lunges per leg. Powerful leg workout!",
-    "⛹️ **High Knees**: Do high knees in place for 30 seconds. Cardio blast!",
+    "⏱️ 2-Minute Desk Stretch: Stand, reach arms up, hinge at hips, gentle side bends. Great for posture!",
+    "🏃 10 Jumping Jacks: Quick cardio burst to increase circulation and focus.",
+    "📍 Wall Push-ups: 10–15 slow reps, keeping core tight. Great upper-body starter.",
+    "🧘 5-Minute Walk: Walk outside if possible — fresh air helps reset the mind.",
+    "💪 Bodyweight Squats: 15 reps, controlled descent, knees tracking toes.",
+    "🤸 Plank Hold: 30–60 seconds. Keep a straight line from head to heels.",
+    "🏃 Stairs: 3–5 rounds up and down at a steady pace for cardio and legs.",
+    "🙏 Mini Yoga Flow: 8–10 minutes of sun salutations and hip openers.",
+    "👣 Walking Lunges: 10 per leg, focus on balance and posture.",
+    "⛹️ High Knees: 30–45 seconds to elevate heart rate — great micro-workout.",
+    "🔁 7-Minute Circuit: 30s squats, 30s push-ups, 30s plank, 30s rest — repeat twice.",
 ]
 
 BREATHING_EXERCISES = [
-    "🌬️ **Box Breathing (4-4-4-4)**:\n  1. Breathe in for 4 counts\n  2. Hold for 4 counts\n  3. Breathe out for 4 counts\n  4. Hold for 4 counts\n  Repeat 5 times. Perfect for calmness.",
-    "🌊 **4-7-8 Breathing** (Relaxation):\n  1. Breathe in for 4 counts\n  2. Hold for 7 counts\n  3. Breathe out for 8 counts\n  Repeat 5 times. Great for sleep!",
-    "🌬️ **Belly Breathing** (Grounding):\n  1. Put hand on belly\n  2. Inhale deeply, feel belly expand\n  3. Exhale slowly, feel belly contract\n  Repeat 10 times. Activates calm.",
-    "🎯 **Energizing Breath** (Morning boost):\n  1. Quick short inhales (sniff sniff sniff)\n  2. Long slow exhale\n  Repeat 1 minute. Great for energy!",
+    "🌬️ Box Breathing (4-4-4-4):\n  1. Inhale 4\n  2. Hold 4\n  3. Exhale 4\n  4. Hold 4\n  Repeat 4–6 cycles. Great for grounding and focus.",
+    "🌊 4-7-8 Breathing (Relaxation):\n  1. Inhale 4\n  2. Hold 7\n  3. Exhale 8\n  Repeat 4 cycles for deep relaxation and sleep prep.",
+    "🌬️ Belly Breathing (Grounding):\n  1. Place hand on belly\n  2. Inhale slowly, feel belly expand\n  3. Exhale fully\n  Repeat 8–10 times to activate calm.",
+    "🎯 Energizing Breath (Morning boost):\n  1. 10 quick short inhales\n  2. Long slow exhale\n  Repeat 1 minute to increase alertness.",
+    "🫧 Alternate Nostril (Balance):\n  1. Close right nostril, inhale left\n  2. Close left, exhale right\n  Repeat 6–8 rounds for balance and calm.",
 ]
 
 WELLNESS_TIPS = [
-    "💤 Sleep: Aim for 7-9 hours nightly. Your brain and body need recovery time!",
-    "💧 Hydration: Drink water throughout the day. A rule: 8 glasses or more!",
-    "🚶 Movement: Take a 20-minute walk daily. Great for body and mind.",
-    "🍎 Nutrition: Eat whole foods. Your energy levels depend on good nutrition.",
-    "🧘 Mindfulness: Spend 5 minutes daily on breathing or meditation.",
-    "📱 Digital Detox: Limit screen time 1 hour before bed.",
-    "☀️ Sunlight: Get 15-20 minutes of morning sunlight. Boosts mood!",
-    "👥 Social: Connect with friends/family. Humans need social connection.",
-    "📚 Learning: Learn something new daily. Keeps your brain sharp!",
-    "🎵 Music: Listen to uplifting music. Mood booster!",
-    "🎯 Goals: Set small achievable goals daily. Momentum builds success!",
-    "✍️ Gratitude: Write down 3 things you're grateful for daily.",
+    "💤 Sleep: Aim for 7–9 hours. Maintain a consistent bedtime routine.",
+    "💧 Hydration: Sip water throughout the day. Flavor with fruit if helpful.",
+    "🚶 Movement: Short frequent walks beat one long sedentary block.",
+    "🍎 Nutrition: Prioritize whole foods and include protein with meals.",
+    "🧘 Mindfulness: 5 minutes of breathwork reduces stress and sharpens focus.",
+    "📱 Digital Detox: Reduce screens 1 hour before bedtime for better sleep.",
+    "☀️ Sunlight: Morning light helps regulate circadian rhythm and mood.",
+    "👥 Social: Schedule short check-ins with friends — social health matters.",
+    "📚 Learning: Try micro-learning — 10 minutes daily adds up fast.",
+    "🎵 Music: Use playlists to shape mood and motivation throughout the day.",
+    "🎯 Goals: Break big goals into tiny, actionable tasks and celebrate small wins.",
+    "✍️ Gratitude: Write 1 small win each evening to build positivity.",
 ]
 
 
@@ -122,40 +141,11 @@ async def determine_prefix(bot, message):
     return commands.when_mentioned_or(DEFAULT_PREFIX)(bot, message)
 
 
-def get_weather_emoji(description: str) -> str:
-    """Return emoji based on weather description."""
-    desc = description.lower()
-    if "clear" in desc or "sunny" in desc:
-        return "☀️"
-    elif "cloud" in desc:
-        return "☁️"
-    elif "rain" in desc or "drizzle" in desc:
-        return "🌧️"
-    elif "thunderstorm" in desc:
-        return "⛈️"
-    elif "snow" in desc:
-        return "❄️"
-    elif "wind" in desc:
-        return "💨"
-    elif "fog" in desc or "mist" in desc:
-        return "🌫️"
-    else:
-        return "🌤️"
+
+# Weather functionality removed in v2.0.0 — no fetch_weather implementation
 
 
-async def fetch_weather(city: str) -> dict:
-    """Fetch weather data for a city using wttr.in API."""
-    try:
-        url = f"https://wttr.in/{city}?format=j1"
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-        data = response.json()
-        return data
-    except Exception as e:
-        return None
-
-
-bot = commands.Bot(command_prefix=determine_prefix, intents=intents, description="Ron - The friendly weather and wellness bot")
+bot = commands.Bot(command_prefix=determine_prefix, intents=intents, description="Ron - The friendly wellness and moderation assistant")
 bot.water_reminder_task = None  # Will be set in on_ready()
 
 # Disable the built-in help command so we can use our custom one
@@ -186,15 +176,7 @@ async def water_reminder_loop(bot):
             for user_id in WATER_REMINDER_USERS.copy():
                 try:
                     user = await bot.fetch_user(user_id)
-                    reminders = [
-                        "💧 Time to drink some water! Stay hydrated.",
-                        "💧 Don't forget to hydrate! Drink a glass of water.",
-                        "💧 Hydration check! Have you had enough water today?",
-                        "💧 Your body needs water! Take a drink and stretch.",
-                        "💧 Feeling thirsty? Drink up! Stay healthy.",
-                        "💧 Reminder: Drink water for better focus and health!",
-                    ]
-                    await user.send(random.choice(reminders))
+                    await user.send(random.choice(WATER_REMINDER_PHRASES))
                 except Exception:
                     WATER_REMINDER_USERS.discard(user_id)
         except asyncio.CancelledError:
@@ -435,85 +417,7 @@ async def slash_dm(interaction: discord.Interaction, target: str, message: str, 
         await interaction.response.send_message(f"Failed to send DM: {e}", ephemeral=True)
 
 
-@bot.command()
-async def weather(ctx, *, city: str):
-    """Get the current weather for a city. Usage: !weather London"""
-    async with ctx.typing():
-        data = await fetch_weather(city)
-        if not data or "current_condition" not in str(data):
-            await ctx.send(f"❌ Could not find weather data for '{city}'. Please try another city name.")
-            return
-        
-        try:
-            current = data["current_condition"][0]
-            location = data["nearest_area"][0]
-            
-            temp_c = current.get("temp_C", "N/A")
-            temp_f = current.get("temp_F", "N/A")
-            condition = current.get("weatherDesc", [{}])[0].get("value", "Unknown")
-            humidity = current.get("humidity", "N/A")
-            wind_kph = current.get("windspeedKmph", "N/A")
-            feels_like_c = current.get("FeelsLikeC", "N/A")
-            
-            city_name = location.get("areaName", [{}])[0].get("value", city)
-            country = location.get("country", [{}])[0].get("value", "")
-            
-            emoji = get_weather_emoji(condition)
-            
-            embed = discord.Embed(
-                title=f"{emoji} Weather in {city_name}, {country}",
-                description=condition,
-                color=discord.Color.blue()
-            )
-            embed.add_field(name="🌡️ Temperature", value=f"{temp_c}°C ({temp_f}°F)", inline=True)
-            embed.add_field(name="🤔 Feels Like", value=f"{feels_like_c}°C", inline=True)
-            embed.add_field(name="💨 Wind Speed", value=f"{wind_kph} km/h", inline=True)
-            embed.add_field(name="💧 Humidity", value=f"{humidity}%", inline=True)
-            
-            await ctx.send(embed=embed)
-        except Exception as e:
-            await ctx.send(f"❌ Error processing weather data: {str(e)}")
-
-
-@bot.tree.command(name="weather")
-@app_commands.describe(city="City name to get weather for")
-async def slash_weather(interaction: discord.Interaction, city: str):
-    """Get the current weather for a city."""
-    await interaction.response.defer()
-    data = await fetch_weather(city)
-    if not data or "current_condition" not in str(data):
-        await interaction.followup.send(f"❌ Could not find weather data for '{city}'. Please try another city name.")
-        return
-    
-    try:
-        current = data["current_condition"][0]
-        location = data["nearest_area"][0]
-        
-        temp_c = current.get("temp_C", "N/A")
-        temp_f = current.get("temp_F", "N/A")
-        condition = current.get("weatherDesc", [{}])[0].get("value", "Unknown")
-        humidity = current.get("humidity", "N/A")
-        wind_kph = current.get("windspeedKmph", "N/A")
-        feels_like_c = current.get("FeelsLikeC", "N/A")
-        
-        city_name = location.get("areaName", [{}])[0].get("value", city)
-        country = location.get("country", [{}])[0].get("value", "")
-        
-        emoji = get_weather_emoji(condition)
-        
-        embed = discord.Embed(
-            title=f"{emoji} Weather in {city_name}, {country}",
-            description=condition,
-            color=discord.Color.blue()
-        )
-        embed.add_field(name="🌡️ Temperature", value=f"{temp_c}°C ({temp_f}°F)", inline=True)
-        embed.add_field(name="🤔 Feels Like", value=f"{feels_like_c}°C", inline=True)
-        embed.add_field(name="💨 Wind Speed", value=f"{wind_kph} km/h", inline=True)
-        embed.add_field(name="💧 Humidity", value=f"{humidity}%", inline=True)
-        
-        await interaction.followup.send(embed=embed)
-    except Exception as e:
-        await interaction.followup.send(f"❌ Error processing weather data: {str(e)}")
+# The weather commands (prefix and slash) were removed in v2.0.0.
 
 
 @bot.command()
@@ -554,21 +458,83 @@ async def sync(ctx):
 
 
 @bot.command()
+async def purge(ctx, count: int = 10):
+    """Moderator command: bulk-delete `count` messages from the current channel."""
+    if not is_mod(ctx):
+        await ctx.send("❌ You don't have permission to use this command.")
+        return
+    if count < 1 or count > 100:
+        await ctx.send("Please specify a count between 1 and 100.")
+        return
+    try:
+        deleted = await ctx.channel.purge(limit=count+1)
+        await ctx.send(f"🧹 Purged {len(deleted)-1} messages.", delete_after=5)
+    except Exception as e:
+        await ctx.send(f"Failed to purge messages: {e}")
+
+
+@bot.tree.command(name="purge")
+@app_commands.describe(count="Number of messages to delete (1-100)")
+async def slash_purge(interaction: discord.Interaction, count: int = 10):
+    if not is_mod_interaction(interaction):
+        await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
+        return
+    if count < 1 or count > 100:
+        await interaction.response.send_message("Please specify a count between 1 and 100.", ephemeral=True)
+        return
+    try:
+        deleted = await interaction.channel.purge(limit=count+1)
+        await interaction.response.send_message(f"🧹 Purged {len(deleted)-1} messages.", ephemeral=True)
+    except Exception as e:
+        await interaction.response.send_message(f"Failed to purge messages: {e}", ephemeral=True)
+
+
+@bot.command()
+async def announce(ctx, channel: discord.TextChannel, *, message: str):
+    """Moderator command: send a highlighted announcement to a channel."""
+    if not is_mod(ctx):
+        await ctx.send("❌ You don't have permission to use this command.")
+        return
+    try:
+        embed = discord.Embed(title="📢 Announcement", description=message, color=discord.Color.gold())
+        embed.set_footer(text=f"Posted by {ctx.author.display_name}")
+        await channel.send(embed=embed)
+        await ctx.send(f"✅ Announcement sent to {channel.mention}.")
+    except Exception as e:
+        await ctx.send(f"Failed to send announcement: {e}")
+
+
+@bot.tree.command(name="announce")
+@app_commands.describe(channel="Target channel", message="Announcement message")
+async def slash_announce(interaction: discord.Interaction, channel: discord.TextChannel, message: str):
+    if not is_mod_interaction(interaction):
+        await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
+        return
+    try:
+        embed = discord.Embed(title="📢 Announcement", description=message, color=discord.Color.gold())
+        embed.set_footer(text=f"Posted by {interaction.user.display_name}")
+        await channel.send(embed=embed)
+        await interaction.response.send_message(f"✅ Announcement sent to {channel.mention}.", ephemeral=True)
+    except Exception as e:
+        await interaction.response.send_message(f"Failed to send announcement: {e}", ephemeral=True)
+
+
+@bot.command()
 async def about(ctx):
     """Show information about Ron Bot."""
     embed = discord.Embed(
         title="🤖 Ron Bot",
-        description="The friendly weather and wellness companion!",
+        description="The friendly wellness and moderation companion!",
         color=discord.Color.blue()
     )
     embed.add_field(
         name="Features",
-        value="🌍 Weather • 💧 Hydration Reminders • 💪 Wellness • 🎯 Motivation",
+        value="💧 Hydration Reminders • 💪 Wellness • 🎯 Motivation • 🧹 Moderation",
         inline=False
     )
     embed.add_field(
         name="Commands",
-        value="`!weather <city>` • `!quote` • `!roll NdM` • `!ping` • `!remind` • `!waterreminder`",
+        value="`!quote` • `!roll NdM` • `!ping` • `!remind` • `!waterreminder` • `!purge` • `!announce`",
         inline=False
     )
     embed.add_field(
@@ -585,17 +551,17 @@ async def slash_about(interaction: discord.Interaction):
     """Show information about Ron Bot."""
     embed = discord.Embed(
         title="🤖 Ron Bot",
-        description="The friendly weather and wellness companion!",
+        description="The friendly wellness and moderation companion!",
         color=discord.Color.blue()
     )
     embed.add_field(
         name="Features",
-        value="🌍 Weather • 💧 Hydration Reminders • 💪 Wellness • 🎯 Motivation",
+        value="💧 Hydration Reminders • 💪 Wellness • 🎯 Motivation • 🧹 Moderation",
         inline=False
     )
     embed.add_field(
         name="Commands",
-        value="`/weather` • `/quote` • `/roll` • `/ping` • `/remind` • `/waterreminder`",
+        value="`/quote` • `/roll` • `/ping` • `/remind` • `/waterreminder` • `/purge` • `/announce`",
         inline=False
     )
     embed.add_field(
@@ -616,8 +582,8 @@ async def slash_help(interaction: discord.Interaction):
     )
     
     embed.add_field(
-        name="🌍 **Weather**",
-        value="`/weather <city>` - Get current weather for any city with details",
+        name="🧹 **Moderation**",
+        value="`/purge <count>` - Bulk delete messages (mods only)\n`/announce <channel> <message>` - Post an announcement",
         inline=False
     )
     

@@ -198,7 +198,7 @@ if command -v systemctl >/dev/null 2>&1; then
 
   cat > "$UNIT_FILE" <<EOF
 [Unit]
-Description=Ron Bot (weather and wellness)
+Description=Ron Bot (wellness and moderation)
 After=network.target
 
 [Service]

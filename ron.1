@@ -1,340 +1,199 @@
-.TH RON 1 "February 2026" "Ron Bot v1.0" "User Commands"
-.SH NAME
-ron \- friendly Discord bot with weather, wellness, and motivation features
-
-.SH SYNOPSIS
-.B ron-start
-.br
-.B ron-stop
-.br
-.B ron-status
-
-.SH DESCRIPTION
-Ron is a friendly Discord bot providing weather information, wellness reminders, motivational features, and quality-of-life commands designed to help users stay healthy, hydrated, and motivated.
-
-The bot connects to Discord and responds to both prefix commands (default: \fB!\fR) and slash commands (\fB/\fR).
-
-.SH COMMANDS
-
-.SS Weather & Location
-.TP
-.B /weather \fICITY\fR
-Get current weather for any city with temperature, humidity, wind speed, and weather-appropriate emojis. Uses the free wttr.in API.
-
-Example: \fB/weather London\fR or \fB!weather "New York"\fR
-
-.SS Fun & Games
-.TP
-.B /ping
-Check bot latency and response time in milliseconds.
-
-.TP
-.B /roll \fINdM\fR
-Roll dice using NdM format (N = number of dice, M = sides per die).
-
-Examples: \fB/roll 2d6\fR, \fB!roll d20\fR, \fB!roll 3d8\fR
-
-Supports up to 100 dice maximum.
-
-.TP
-.B /quote
-Send a random motivational quote from 22+ inspirational sources including Steve Jobs, Eleanor Roosevelt, and Vince Lombardi.
-
-.SS Wellness & Health
-.TP
-.B /waterreminder
-Subscribe or unsubscribe from hourly water hydration reminders. The bot will send hourly DM reminders with encouraging messages to stay hydrated.
-
-.TP
-.B /workout
-Get a random workout suggestion with full instructions. Includes quick desk stretches (2 minutes), cardio options, strength training, and full yoga flows.
-
-.TP
-.B /breathing
-Guided breathing exercise to reduce stress and improve focus. Four different exercise types:
-- Box Breathing (4-4-4-4)
-- 4-7-8 Breathing (relaxation)
-- Belly Breathing (grounding)
-- Energizing Breath (quick energy boost)
-
-.TP
-.B /tip
-Get a daily wellness tip covering topics like sleep, nutrition, movement, mindfulness, social connection, and goals.
-
-.TP
-.B /motivate
-Quick motivational affirmation boost for when you need encouragement.
-
-.SS Reminders
-.TP
-.B /remind \fIMINUTES MESSAGE\fR
-Set a personal DM reminder that will be sent after the specified number of minutes.
-
-Examples:
-  \fB/remind 10 Take a break\fR
-  \fB!remind 30 Drink water and stretch\fR
-  \fB/remind 60 Check your email\fR
-
-.SS Information & Management
-.TP
-.B /help
-Show all available commands with descriptions and usage examples.
-
-.TP
-.B /about
-Display information about Ron Bot, its features, and available commands.
-
-.TP
-.B !sync
-Manually synchronize slash commands with Discord. This is an owner-only command and should be run after updating bot commands.
-
-.SH INSTALLATION
-
-.SS Quick Install
-.nf
-cd /path/to/Ron
-./scripts/install_all.sh
-.fi
-
-This script will:
-.RS
-- Create Python virtual environment
-- Install dependencies from requirements.txt
-- Set up .env configuration
-- Create global symlinks (ron-start, ron-stop, ron-status)
-.RE
-
-.SS Manual Install
-.nf
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-# Edit .env with your DISCORD_TOKEN
-python3 ron_bot.py
-.fi
-
-.SH USAGE
-
-.SS Starting the Bot
-.nf
-ron-start              # Using symlink (if installed)
-./scripts/run_ron.sh   # Direct script
-.fi
-
-.SS Stopping the Bot
-.nf
-ron-stop               # Using symlink
-./scripts/stop_ron.sh  # Direct script
-.fi
-
-.SS Checking Status
-.nf
-ron-status             # Using symlink
-./scripts/ron-status.sh # Direct script
-.fi
-
-.SS Systemd Integration
-Install as systemd --user service for auto-start on login:
-.nf
-./scripts/install_systemd_user.sh
-systemctl --user enable ron.service
-systemctl --user start ron.service
-systemctl --user status ron.service
-.fi
-
-.SS Viewing Logs
-.nf
-tail -f ron.log              # Real-time log
-tail -50 ron.log             # Last 50 lines
-grep ERROR ron.log           # Errors only
-.fi
-
-.SH CONFIGURATION
-
-.SS Environment Variables
-Required in \fB.env\fR file:
-
-.TP
-.B DISCORD_TOKEN
-Your Discord bot token from the Developer Portal. Required for bot operation.
-
-.TP
-.B PREFIX
-Command prefix (default: \fB!\fR). Change to customize prefix for your server.
-
-Example \fB.env\fR:
-.nf
-DISCORD_TOKEN=your_token_here
-PREFIX=!
-.fi
-
-.SH FEATURES
-
-.SS Weather System
-- Real-time weather data from wttr.in API (no API key required)
-- Temperature in both Celsius and Fahrenheit
-- Humidity, wind speed, "feels like" temperature
-- Weather-appropriate emoji indicators
-- Works for any city worldwide
-
-.SS Water Reminder System
-- Hourly hydration reminders via direct message
-- 6 different encouraging reminder messages
-- Subscribe/unsubscribe on demand
-- Keeps users healthy and hydrated
-
-.SS Wellness Content
-- 12 affirmations for motivation
-- 10 workout suggestions (quick to full routines)
-- 4 guided breathing exercises
-- 12 wellness tips on sleep, nutrition, movement, and mindfulness
-
-.SH REQUIREMENTS
-
-.TP
-.B Python
-Version 3.8 or higher
-
-.TP
-.B Dependencies
-- discord.py >= 2.0.0
-- python-dotenv
-- requests
-
-.TP
-.B Discord Bot
-- Message Content Intent enabled
-- Guild Members Intent enabled
-
-.SH FILES
-
-.TP
-.B .env
-Environment configuration file containing DISCORD_TOKEN and PREFIX
-
-.TP
-.B .env.example
-Example environment file template
-
-.TP
-.B ron_bot.py
-Main bot script
-
-.TP
-.B requirements.txt
-Python dependencies list
-
-.TP
-.B ron.log
-Bot activity and error logs
-
-.TP
-.B ron.pid
-Process ID file (created when bot is running)
-
-.TP
-.B configs.json
-Persistent storage for bot configurations
-
-.SH UNINSTALLATION
-
-To remove Ron Bot and all installed components:
-.nf
-./scripts/uninstall_all.sh          # Remove symlinks and service
-./scripts/uninstall_all.sh --remove-venv  # Also remove virtualenv
-.fi
-
-.SH TROUBLESHOOTING
-
-.SS Bot won't start
-.RS
-1. Verify DISCORD_TOKEN is valid in .env
-2. Check Python version: \fBpython3 --version\fR
-3. View logs: \fBtail -f ron.log\fR
-4. Ensure network connection is active
-.RE
-
-.SS Commands not appearing in Discord
-.RS
-1. Run \fB!sync\fR to manually sync commands
-2. Verify bot has "applications.commands" scope
-3. Check bot has appropriate permissions in server
-.RE
-
-.SS Water reminders not working
-.RS
-1. Ensure user has DMs enabled
-2. Check bot has permission to DM users
-3. Verify user has subscribed with \fB!waterreminder\fR
-.RE
-
-.SS Weather API errors
-.RS
-1. Check internet connection
-2. Verify city name spelling
-3. Try alternative city name format
-.RE
-
-.SH ENVIRONMENT
-
-.TP
-.B DISCORD_TOKEN
-Must be set in .env for bot to connect to Discord
-
-.TP
-.B PREFIX
-Defaults to "!" if not set in .env
-
-.SH EXAMPLES
-
-.SS Get weather for a city
-.nf
-!weather London
-/weather "New York"
-!weather Tokyo
-.fi
-
-.SS Roll some dice
-.nf
-!roll 2d6
-/roll d20
-!roll 3d8
-.fi
-
-.SS Set a reminder
-.nf
-!remind 10 Take a break
-/remind 30 Drink water
-!remind 60 Stretch and move
-.fi
-
-.SS Get wellness suggestions
-.nf
-!workout
-/breathing
-!tip
-/motivate
-.fi
-
-.SM
-
-.SH AUTHOR
-Ron Bot - Created for friendly Discord communities focused on wellness and motivation.
-
-.SH SEE ALSO
-discord.py documentation: https://discordpy.readthedocs.io/
-wttr.in API: https://wttr.in
-
-.SH NOTES
-
-- All commands work in both prefix (!) and slash (/) formats
-- Water reminders are sent via private DM
-- Weather data updates in real-time
-- Requires active Discord bot token
-- Works in any Discord server where bot is invited
-- Use "\fB!help\fR" or "\fB/help\fR" in Discord for quick reference
-
-.SH DISCLAIMER
-
-Ron Bot is provided as-is for Discord communities. Ensure your bot token remains private and never share it. Follow Discord's Terms of Service and community guidelines when using this bot.
+ .TH RON 1 "February 2026" "Ron Bot v2.0.0" "User Commands"
+ .SH NAME
+ ron \- friendly Discord bot focused on wellness and moderation utilities
+
+ .SH SYNOPSIS
+ .B ron-start
+ .br
+ .B ron-stop
+ .br
+ .B ron-status
+
+ .SH DESCRIPTION
+ Ron is a friendly Discord bot providing wellness reminders, motivational features, and moderation utilities designed to help communities stay healthy, hydrated, and organized.
+
+ The bot connects to Discord and responds to both prefix commands (default: \fB!\fR) and slash commands (\fB/\fR).
+
+ .SH COMMANDS
+
+ .SS Moderation & Management
+ .TP
+ .B /purge \fICOUNT\fR
+ Bulk-delete the most recent messages in the current channel. Moderators only. Count must be between 1 and 100.
+
+ .TP
+ .B /announce \fICHANNEL MESSAGE\fR
+ Post a highlighted announcement embed into the specified channel. Moderators only.
+
+ .SS Fun & Games
+ .TP
+ .B /ping
+ Check bot latency and response time in milliseconds.
+
+ .TP
+ .B /roll \fINdM\fR
+ Roll dice using NdM format (N = number of dice, M = sides per die). Supports up to 100 dice.
+
+ .TP
+ .B /quote
+ Send a random motivational quote from the built-in collection.
+
+ .SS Wellness & Health
+ .TP
+ .B /waterreminder
+ Subscribe or unsubscribe from hourly hydration reminders. The bot will send hourly DM reminders with a rotating set of encouraging phrases.
+
+ .TP
+ .B /workout
+ Get a random quick workout suggestion — short circuits and micro-workouts for breaks.
+
+ .TP
+ .B /breathing
+ Guided breathing exercises to reduce stress and improve focus.
+
+ .TP
+ .B /tip
+ Get a daily wellness tip covering sleep, nutrition, movement, and mindfulness.
+
+ .TP
+ .B /motivate
+ Quick motivational affirmation boost.
+
+ .SS Reminders
+ .TP
+ .B /remind \fIMINUTES MESSAGE\fR
+ Set a personal DM reminder that will be sent after the specified number of minutes.
+
+ Examples:
+   \fB/remind 10 Take a break\fR
+   \fB!remind 30 Drink water and stretch\fR
+
+ .SS Information & Management
+ .TP
+ .B /help
+ Show all available commands with descriptions and usage examples.
+
+ .TP
+ .B /about
+ Display information about Ron Bot, its features, and available commands.
+
+ .TP
+ .B !sync
+ Manually synchronize slash commands with Discord. Owner-only.
+
+ .SH INSTALLATION
+
+ .SS Quick Install
+ .nf
+ cd /path/to/Ron-Bot
+ ./scripts/install.sh
+ .fi
+
+ .SS Manual Install
+ .nf
+ python3 -m venv .venv
+ source .venv/bin/activate
+ pip install -r requirements.txt
+ cp .env.example .env
+ # Edit .env with your DISCORD_TOKEN
+ python3 scripts/ron_bot.py
+ .fi
+
+ .SH USAGE
+
+ .SS Starting the Bot
+ .nf
+ ron-start              # Using symlink (if installed)
+ ./scripts/run_ron.sh   # Direct script
+ .fi
+
+ .SS Stopping the Bot
+ .nf
+ ron-stop               # Using symlink
+ ./scripts/stop_ron.sh  # Direct script
+ .fi
+
+ .SS Checking Status
+ .nf
+ ron-status             # Using symlink
+ ./scripts/ron-status.sh # Direct script
+ .fi
+
+ .SS Viewing Logs
+ .nf
+ tail -f ron.log              # Real-time log
+ tail -50 ron.log             # Last 50 lines
+ grep ERROR ron.log           # Errors only
+ .fi
+
+ .SH CONFIGURATION
+
+ .SS Environment Variables
+ Required in \fB.env\fR file:
+
+ .TP
+ .B DISCORD_TOKEN
+ Your Discord bot token from the Developer Portal. Required for bot operation.
+
+ .TP
+ .B PREFIX
+ Command prefix (default: \fB!\fR). Change to customize prefix for your server.
+
+ .SH FEATURES
+
+ .SS Water Reminder System
+ - Hourly hydration reminders via direct message
+ - Multiple encouraging reminder messages (expanded set)
+ - Subscribe/unsubscribe on demand
+
+ .SS Wellness Content
+ - Expanded affirmations and wellness content
+ - More workout ideas and short circuits
+ - Variety of breathing exercises for grounding and energy
+ - Practical wellness tips on sleep, nutrition, movement, and habits
+
+ .SS Moderation Tools
+ - `purge` bulk-deletes messages (moderator only)
+ - `announce` posts formatted announcement embeds in channels
+
+ .SH REQUIREMENTS
+
+ .TP
+ .B Python
+ Version 3.8 or higher
+
+ .TP
+ .B Dependencies
+ - discord.py >= 2.0.0
+ - python-dotenv
+
+ .TP
+ .B Discord Bot
+ - Message Content Intent enabled
+ - Guild Members Intent enabled
+
+ .SH TROUBLESHOOTING
+
+ .SS Bot won't start
+ .RS
+ 1. Verify DISCORD_TOKEN is valid in .env
+ 2. Check Python version: \fBpython3 --version\fR
+ 3. View logs: \fBtail -f ron.log\fR
+ 4. Ensure network connection is active
+ .RE
+
+ .SS Commands not appearing in Discord
+ .RS
+ 1. Run \fB!sync\fR to manually sync commands
+ 2. Verify bot has "applications.commands" scope
+ 3. Check bot has appropriate permissions in server
+ .RE
+
+ .SH NOTES
+
+ - Weather functionality removed in v2.0.0 to focus on wellness and moderation.
+ - All commands work in both prefix (`!`) and slash (`/`) formats
+ - Water reminders are sent via private DM
+
+ .SH AUTHOR
+ Ron Bot - Created for friendly Discord communities focused on wellness and moderation.

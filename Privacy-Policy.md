@@ -1,6 +1,7 @@
+```markdown
 # Privacy Policy for Ron Discord Bot
 
-**Last Updated: February 7, 2026**
+**Last Updated: February 10, 2026**
 
 ## 1. Introduction
 
@@ -16,7 +17,6 @@ When Ron operates in your Discord server, the Bot automatically collects:
 - **Server Information**: Server/guild ID where the Bot is present
 - **Channel Information**: Channel IDs where commands are used
 - **Command Usage**: Content of messages that invoke Bot commands (both prefix and slash commands)
-- **Weather Queries**: City names requested for weather information
 - **Reminder Data**: User-provided reminder messages and times (temporary, in-memory only)
 - **Timestamps**: When interactions occur
 
@@ -36,7 +36,6 @@ Ron maintains logs for debugging and operational purposes, stored locally in `ro
 - Error messages and stack traces
 - User IDs involved in errors
 - Timestamps of events
-- Weather API request outcomes
 - Bot startup and connection events
 
 ### 2.4 Configuration Data
@@ -45,8 +44,6 @@ Server configuration data stored in `configs.json` may include:
 
 - Server/guild IDs
 - Bot configuration settings (if any are added in future versions)
-
-Note: As of the current version, Ron stores minimal persistent configuration data.
 
 ### 2.5 Information We Do NOT Collect
 
@@ -58,7 +55,6 @@ Ron does not collect, store, or process:
 - Voice chat data
 - Attachments or media files (except temporarily to relay DM images via the DM command)
 - Personal health data, medical information, or fitness tracking data
-- Location data beyond city names provided for weather queries
 - Payment or financial information
 - Messages in channels where the Bot lacks access
 
@@ -67,7 +63,6 @@ Ron does not collect, store, or process:
 We use collected information solely for the following purposes:
 
 - **Bot Operation**: To execute commands and provide Bot functionality
-- **Weather Service**: To fetch and display weather information for requested cities
 - **Reminder Delivery**: To send reminders at requested times via DM
 - **Water Reminders**: To send hourly hydration reminders to subscribed users
 - **Command Processing**: To parse and respond to user commands
@@ -83,7 +78,7 @@ All data is stored locally on the server where Ron is deployed:
 - **In-Memory Data**: Water reminder subscriptions and active reminder tasks are stored only in RAM
 - **Log Files**: Stored in `ron.log` in the project root directory
 - **Configuration**: Minimal config data stored in `configs.json` in the project root
-- **No Cloud Storage**: No data is transmitted to external servers or cloud services (except Discord's API for Bot operations and wttr.in for weather data)
+- **No Cloud Storage**: No data is transmitted to external servers or cloud services except Discord's API for Bot operations
 
 ### 4.2 Retention Period
 
@@ -114,15 +109,7 @@ Ron uses Discord's API to function and necessarily shares data with Discord acco
 - Slash command interactions
 - Direct messages sent via the Bot
 
-### 5.3 Weather API (wttr.in)
-
-When users request weather information, the Bot sends HTTP requests to the wttr.in API containing:
-
-- City names provided by users
-- No personal identifiers are sent to the weather API
-- wttr.in may log requests according to their own privacy policies
-
-### 5.4 Legal Requirements
+### 5.3 Legal Requirements
 
 We may disclose information if required by law, such as to comply with a subpoena or similar legal process. However, as Ron is primarily self-hosted, server administrators control their own data.
 
@@ -182,8 +169,6 @@ Ron is open source software released under the MIT License. You can review the c
 - How data is used
 - Security practices implemented
 
-The source code is available in the project repository and can be audited by anyone.
-
 ## 10. Discord's Policies
 
 Ron operates on Discord's platform and is subject to:
@@ -218,150 +203,4 @@ We may update this Privacy Policy from time to time. Changes will be indicated b
 - Documentation in the README file
 - Notifications to server administrators (where feasible)
 
-Continued use of Ron after changes constitutes acceptance of the updated Privacy Policy.
-
-## 14. Data Breach Notification
-
-In the event of a data breach affecting user information:
-
-- Self-hosters are responsible for their own breach response
-- For any managed instances, we will assess the scope and impact
-- We will take immediate steps to secure systems
-- We will notify affected parties as required by applicable law
-
-However, given Ron's self-hosted nature and minimal data collection, individual deployments are the responsibility of their operators.
-
-## 15. Specific Data Practices
-
-### 15.1 Water Reminder System
-
-- User IDs are stored in an in-memory set (`WATER_REMINDER_USERS`)
-- This data is NOT persisted to disk
-- Subscription status is lost when the Bot restarts
-- Reminder messages are sent via Discord DM
-- No hydration tracking data is collected or stored
-- Unsubscribing immediately removes the user ID from the in-memory set
-
-### 15.2 Weather Queries
-
-- City names are sent to wttr.in API in real-time
-- No weather query history is stored locally
-- Weather data is fetched on-demand and not cached
-- The Bot does not log which users requested which cities (except in error logs)
-- wttr.in may log requests according to their own policies
-
-### 15.3 Personal Reminders
-
-- Reminder messages and times are stored only in memory (asyncio tasks)
-- Reminders are not persisted to disk
-- All active reminders are lost if the Bot restarts
-- Reminder content is temporarily processed but not logged
-- Reminders are delivered via Discord DM
-
-### 15.4 Wellness Features
-
-- No usage tracking for wellness commands (workout, breathing, tip, motivate)
-- No personal health or fitness data is collected
-- Command usage may appear in general logs (command name only)
-- Content is selected randomly from predefined lists
-
-### 15.5 DM Functionality
-
-- The DM command allows a restricted user to send messages to server members
-- Message content is temporarily processed but not stored (beyond general logs)
-- Image attachments are relayed through Discord's infrastructure
-- Access is restricted via the `ALLOWED_DM_USER_ID` configuration
-- The Bot does not log DM content (except in error scenarios)
-
-### 15.6 Logging Practices
-
-The `ron.log` file may contain:
-
-- Timestamps of events
-- Command invocations (command names, not full content)
-- Error messages with stack traces
-- User IDs involved in errors
-- Connection status and Bot lifecycle events
-- Weather API request results
-- Minimal command execution details
-
-Logs do NOT contain:
-
-- Full message content
-- Personal health information
-- Passwords or tokens
-- Detailed user conversations
-
-## 16. GDPR Compliance (European Users)
-
-For users in the European Economic Area, you have the following rights under GDPR:
-
-- **Right to Access**: Request copies of your data from server administrators
-- **Right to Rectification**: Request correction of inaccurate data
-- **Right to Erasure**: Request deletion of your data (contact server administrator)
-- **Right to Restrict Processing**: Request limited processing of your data
-- **Right to Data Portability**: Request transfer of your data
-- **Right to Object**: Object to processing of your data
-
-To exercise these rights, contact the administrator of the server where Ron is deployed. For self-hosted instances, administrators can directly access and modify data files.
-
-## 17. California Privacy Rights (CCPA)
-
-California residents have the right to:
-
-- Know what personal information is collected
-- Know whether personal information is sold or disclosed (we do not sell data)
-- Opt-out of the sale of personal information (not applicable as we don't sell data)
-- Request deletion of personal information
-- Non-discrimination for exercising privacy rights
-
-Contact your server administrator to exercise these rights.
-
-## 18. Limitations
-
-This Privacy Policy applies only to Ron and does not cover:
-
-- Other bots on the same Discord server
-- Discord's own data practices
-- Third-party services (wttr.in weather API)
-- Other software or services you may use
-- Data practices of individual self-hosted deployments (beyond what the code implements)
-
-## 19. No Health Data Collection
-
-**IMPORTANT**: Ron does NOT collect, store, or process:
-
-- Personal health information (PHI)
-- Medical records or history
-- Fitness tracking data
-- Hydration tracking data (beyond subscription status)
-- Body measurements or vital signs
-- Dietary information
-- Sleep data
-- Any protected health information under HIPAA or similar regulations
-
-Wellness features provide general suggestions only and do not involve health data collection.
-
-## 20. Contact Information
-
-For questions, concerns, or requests regarding this Privacy Policy or your data:
-
-- Contact the administrator of the server where Ron is deployed
-- For self-hosted instances, you control all data directly
-- File an issue in the project's code repository for questions about data practices
-- Review the source code to verify data handling
-
-## 21. Responsibility for Self-Hosted Instances
-
-While this Privacy Policy describes the data practices implemented in Ron's source code, individual server administrators who self-host the Bot are responsible for:
-
-- Their own privacy policies and notices to users
-- Compliance with applicable privacy laws in their jurisdiction
-- Securing their deployment and protecting stored data
-- Managing data retention and deletion
-- Responding to data access and deletion requests from their users
-- Ensuring .env files and tokens are properly secured
-
----
-
-**By using Ron, you acknowledge that you have read and understood this Privacy Policy.**
+```
