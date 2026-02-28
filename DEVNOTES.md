@@ -1,14 +1,18 @@
-# Developer Notes — Ron v2.0.0
+# Developer Notes — Ron v2.5.0
 
 Purpose
-- v2.0.0 refocuses the project on wellness content and moderation utilities. The weather system and its external dependency were removed.
+- v2.5.0 builds on the wellness/moderation foundation with user statistics,
+  leaderboard functionality, and improved startup reliability. The previous
+  weather feature remains deprecated.
 
 Important changes
 - `scripts/ron_bot.py`
-  - Weather-related logic removed; `fetch_weather` is now a no-op for compatibility.
-  - `requests` import removed; requirements updated.
-  - Added `WATER_REMINDER_PHRASES` — expanded reminders.
-  - Added `purge` and `announce` commands (both prefix and slash versions).
+  - Added `stats`, `leaderboard`, and owner-only `health` commands.
+  - Added startup guard and clearer dotenv import errors.
+  - Help/about embeds updated to list new commands; various doc strings
+    adjusted.
+- `scripts/run_ron.sh` and `scripts/run.sh` modified to call the venv python
+  explicitly.
 
 Developer checklist after pulling v2.0.0
 1. Update your virtualenv and install requirements:

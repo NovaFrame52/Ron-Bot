@@ -121,8 +121,18 @@ if [ "$VERBOSE" -eq 1 ]; then
   echo "Starting Ron Bot..."
 fi
 
-# Start in background and save PID
-nohup python3 "$PROJECT_ROOT/ron_bot.py" >>"$PROJECT_ROOT/ron.log" 2>&1 &
+# Start in background and save PID.  Use the venv's python executable to
+# avoid cases where the shell's PATH isn't modified correctly (see issues
+# where the bot throws ModuleNotFoundError for dotenv).
+PYTHON_EXEC="$PROJECT_ROOT/.venv/bin/python"
+if [ ! -x "$PYTHON_EXEC" ]; then
+  # fallback to plain python3; the activate step above *should* have ensured
+  # pip installed packages are available, but be explicit here so the error
+  # message later is more predictable.
+  PYTHON_EXEC="python3"
+fi
+
+nohup "$PYTHON_EXEC" "$PROJECT_ROOT/ron_bot.py" >>"$PROJECT_ROOT/ron.log" 2>&1 &
 echo $! >"$PIDFILE"
 PID_VAL="$(cat "$PIDFILE" 2>/dev/null || true)"
 echo "Started Ron (PID ${PID_VAL}). Logs: $PROJECT_ROOT/ron.log"

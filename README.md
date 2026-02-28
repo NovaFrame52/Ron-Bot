@@ -1,9 +1,14 @@
-# Ron — Discord Bot (v2.0.0)
+# Ron — Discord Bot (v2.5.0)
 
-Ron v2.0.0 focuses the project on wellness features and moderation utilities. The weather feature was removed to streamline the bot for communities who want hydration, motivation, and moderation tools.
+(This release adds statistics commands and health reporting; see the changelog for details.)
+
+Ron v2.5.0 builds on the wellness and moderation focus with new
+user‑stats and health reporting features. The weather functionality was
+removed in earlier releases to keep the bot lightweight and targeted.
 
 Highlights
-- 💧 Improved hydration reminders with many friendly phrases
+- � New user stats (`stats`), leaderboard, and owner health check commands
+- �💧 Improved hydration reminders with many friendly phrases
 - 💪 Expanded affirmations, workouts, breathing exercises, and wellness tips
 - 🧹 `purge` — moderator bulk-delete messages
 - 📢 `announce` — moderator channel announcements
@@ -33,13 +38,20 @@ Core Commands
 - `!roll NdM` / `/roll NdM`: roll dice (e.g., `2d6`, `d20`)
 - `!remind <minutes> <message>` / `/remind`: personal DM reminder
 
+Additional user commands:
+- `!stats` / `/stats`: view your reminder stats
+- `!leaderboard` / `/leaderboard`: see top streaks
+
+Owner-only commands:
+- `!health` / `/health`: bot status and resource usage
+
 Moderator Commands (server mods only)
 - `!purge <count>` / `/purge <count>`: bulk-delete up to 100 messages
 - `!announce <#channel> <message>` / `/announce`: post a highlighted announcement embed to a channel
 
 Files
 - `scripts/ron_bot.py` — main bot implementation
-- `CHANGELOG.md`, `releasenotes.md`, `GITHUB_RELEASE.md` — release artifacts for v2.0.0
+- `CHANGELOG.md` — history of changes
 - `DEVNOTES.md` — developer notes and migration guidance
 
 Notes

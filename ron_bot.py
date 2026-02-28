@@ -3,41 +3,88 @@ import json
 import random
 import asyncio
 from pathlib import Path
-from dotenv import load_dotenv
+
+# dotenv is optional for users running from the venv; if the import fails we
+# want a clear message instead of a confusing traceback later when TOKEN is
+# missing.  We'll try to import it and give an actionable error if it's
+# unavailable.  The run scripts (and instructions in README) should make sure
+# the virtual environment is activated or the correct interpreter is used.
+try:
+    from dotenv import load_dotenv
+except ImportError as exc:
+    raise ImportError(
+        "python-dotenv is not installed. "
+        "Run `pip install -r requirements.txt` (inside the project's venv) "
+        "or use the provided scripts (`./scripts/run_ron.sh`)."
+    ) from exc
+
 import discord
 from discord.ext import commands
 from discord import app_commands
 from datetime import datetime, timedelta
+from pytz import timezone, all_timezones
+import logging
+import psutil
 
+# Define ROOT first
 ROOT = Path(__file__).parent
 CONFIG_PATH = ROOT / "configs.json"
+REMINDER_STORAGE_PATH = ROOT / "reminders.json"
 
-ALLOWED_DM_USER_ID = 821102915325526046
-
-load_dotenv()
+# Load .env BEFORE any validation
+load_dotenv(dotenv_path=ROOT / ".env")
 TOKEN = os.getenv("DISCORD_TOKEN")
-DEFAULT_PREFIX = os.getenv("PREFIX", "!")
 
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
+# Now validate .env variables
+required_env_vars = ["DISCORD_TOKEN"]
+missing_vars = [var for var in required_env_vars if not os.getenv(var)]
 
+if missing_vars:
+    raise EnvironmentError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
-def load_configs():
-    if CONFIG_PATH.exists():
+if not TOKEN:
+    raise EnvironmentError("DISCORD_TOKEN is not set in the .env file.")
+
+# Initialize reminders from persistent storage
+def load_reminders():
+    if REMINDER_STORAGE_PATH.exists():
         try:
-            return json.loads(CONFIG_PATH.read_text())
+            return json.loads(REMINDER_STORAGE_PATH.read_text())
         except Exception:
             return {}
     return {}
 
+def save_reminders(reminders: dict):
+    REMINDER_STORAGE_PATH.write_text(json.dumps(reminders, indent=2))
 
-def save_configs(configs: dict):
-    CONFIG_PATH.write_text(json.dumps(configs, indent=2))
+reminders = load_reminders()
 
+ALLOWED_DM_USER_ID = 821102915325526046
 
-configs = load_configs()
+# Define DEFAULT_PREFIX (already defined above, but ensure it exists)
+if 'DEFAULT_PREFIX' not in locals():
+    DEFAULT_PREFIX = os.getenv("PREFIX", "!")
 
+# Initialize WATER_REMINDER_USERS as a set
+WATER_REMINDER_USERS = set()
+
+# Define WATER_REMINDER_PHRASES
+WATER_REMINDER_PHRASES = [
+    "💧 Time to drink some water! Stay hydrated.",
+    "🚰 Hydration check: have a glass of water now!",
+    "💦 Quick reminder: water helps your focus and mood.",
+    "🧊 Take a sip of water and stretch your shoulders.",
+    "🥤 Hydrate! Small sips often beat one large drink.",
+    "💧 Feeling thirsty? Drink up and breathe deeply.",
+    "🍋 Try water with a slice of lemon for a refreshing boost.",
+    "💧 Keep a water bottle nearby — sip frequently!",
+    "🔔 Hydration reminder: 1 glass now, another in an hour!",
+    "💚 Water helps your body and mind — take a drink.",
+    "💧 Quick goal: drink 250ml of water in the next 10 minutes.",
+    "⚡ Boost your energy: stand up and drink some water.",
+]
+
+# Define QUOTES
 QUOTES = [
     "The only way to do great work is to love what you do. - Steve Jobs",
     "Your time is limited, don't waste it living someone else's life. - Steve Jobs",
@@ -63,25 +110,7 @@ QUOTES = [
     "It's not whether you get knocked down, it's whether you get up. - Vince Lombardi",
 ]
 
-# Track users who want water reminders
-WATER_REMINDER_USERS = set()
-
-# Expanded water reminder phrases
-WATER_REMINDER_PHRASES = [
-    "💧 Time to drink some water! Stay hydrated.",
-    "🚰 Hydration check: have a glass of water now!",
-    "💦 Quick reminder: water helps your focus and mood.",
-    "🧊 Take a sip of water and stretch your shoulders.",
-    "🥤 Hydrate! Small sips often beat one large drink.",
-    "💧 Feeling thirsty? Drink up and breathe deeply.",
-    "🍋 Try water with a slice of lemon for a refreshing boost.",
-    "💧 Keep a water bottle nearby — sip frequently!",
-    "🔔 Hydration reminder: 1 glass now, another in an hour!",
-    "💚 Water helps your body and mind — take a drink.",
-    "💧 Quick goal: drink 250ml of water in the next 10 minutes.",
-    "⚡ Boost your energy: stand up and drink some water.",
-]
-
+# Define AFFIRMATIONS
 AFFIRMATIONS = [
     "You are capable of amazing things. 💪",
     "Your potential is limitless — keep taking steps. ✨",
@@ -99,46 +128,14 @@ AFFIRMATIONS = [
     "You belong and you are enough, exactly as you are. 💚",
 ]
 
-WORKOUT_IDEAS = [
-    "⏱️ 2-Minute Desk Stretch: Stand, reach arms up, hinge at hips, gentle side bends. Great for posture!",
-    "🏃 10 Jumping Jacks: Quick cardio burst to increase circulation and focus.",
-    "📍 Wall Push-ups: 10–15 slow reps, keeping core tight. Great upper-body starter.",
-    "🧘 5-Minute Walk: Walk outside if possible — fresh air helps reset the mind.",
-    "💪 Bodyweight Squats: 15 reps, controlled descent, knees tracking toes.",
-    "🤸 Plank Hold: 30–60 seconds. Keep a straight line from head to heels.",
-    "🏃 Stairs: 3–5 rounds up and down at a steady pace for cardio and legs.",
-    "🙏 Mini Yoga Flow: 8–10 minutes of sun salutations and hip openers.",
-    "👣 Walking Lunges: 10 per leg, focus on balance and posture.",
-    "⛹️ High Knees: 30–45 seconds to elevate heart rate — great micro-workout.",
-    "🔁 7-Minute Circuit: 30s squats, 30s push-ups, 30s plank, 30s rest — repeat twice.",
-]
-
-BREATHING_EXERCISES = [
-    "🌬️ Box Breathing (4-4-4-4):\n  1. Inhale 4\n  2. Hold 4\n  3. Exhale 4\n  4. Hold 4\n  Repeat 4–6 cycles. Great for grounding and focus.",
-    "🌊 4-7-8 Breathing (Relaxation):\n  1. Inhale 4\n  2. Hold 7\n  3. Exhale 8\n  Repeat 4 cycles for deep relaxation and sleep prep.",
-    "🌬️ Belly Breathing (Grounding):\n  1. Place hand on belly\n  2. Inhale slowly, feel belly expand\n  3. Exhale fully\n  Repeat 8–10 times to activate calm.",
-    "🎯 Energizing Breath (Morning boost):\n  1. 10 quick short inhales\n  2. Long slow exhale\n  Repeat 1 minute to increase alertness.",
-    "🫧 Alternate Nostril (Balance):\n  1. Close right nostril, inhale left\n  2. Close left, exhale right\n  Repeat 6–8 rounds for balance and calm.",
-]
-
-WELLNESS_TIPS = [
-    "💤 Sleep: Aim for 7–9 hours. Maintain a consistent bedtime routine.",
-    "💧 Hydration: Sip water throughout the day. Flavor with fruit if helpful.",
-    "🚶 Movement: Short frequent walks beat one long sedentary block.",
-    "🍎 Nutrition: Prioritize whole foods and include protein with meals.",
-    "🧘 Mindfulness: 5 minutes of breathwork reduces stress and sharpens focus.",
-    "📱 Digital Detox: Reduce screens 1 hour before bedtime for better sleep.",
-    "☀️ Sunlight: Morning light helps regulate circadian rhythm and mood.",
-    "👥 Social: Schedule short check-ins with friends — social health matters.",
-    "📚 Learning: Try micro-learning — 10 minutes daily adds up fast.",
-    "🎵 Music: Use playlists to shape mood and motivation throughout the day.",
-    "🎯 Goals: Break big goals into tiny, actionable tasks and celebrate small wins.",
-    "✍️ Gratitude: Write 1 small win each evening to build positivity.",
-]
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
 
 
 async def determine_prefix(bot, message):
-    return commands.when_mentioned_or(DEFAULT_PREFIX)(bot, message)
+    prefix = os.getenv("PREFIX", "!")
+    return commands.when_mentioned_or(prefix)(bot, message)
 
 
 
@@ -154,7 +151,10 @@ bot.remove_command("help")
 
 @bot.event
 async def on_ready():
-    print(f"Ron is ready. Logged in as: {bot.user} (ID: {bot.user.id})")
+    if bot.user:
+        print(f"Ron is ready. Logged in as: {bot.user} (ID: {bot.user.id})")
+    else:
+        print("Ron is ready, but bot.user is not yet available.")
     try:
         await bot.tree.sync()
         print("Synced slash commands (bot.tree)")
@@ -186,14 +186,14 @@ async def water_reminder_loop(bot):
 
 
 def is_mod(ctx):
-    return ctx.author.guild_permissions.administrator or ctx.author.guild_permissions.manage_guild
+    return ctx.author.guild_permissions.administrator or ctx.author.guild.permissions.manage_guild
 
 
 def is_mod_interaction(interaction: discord.Interaction):
     if not interaction.guild:
         return False
     user = interaction.user
-    return user.guild_permissions.administrator or user.guild_permissions.manage_guild
+    return user.guild.permissions.administrator or user.guild.permissions.manage_guild
 
 
 @bot.command()
@@ -420,28 +420,36 @@ async def slash_dm(interaction: discord.Interaction, target: str, message: str, 
 # The weather commands (prefix and slash) were removed in v2.0.0.
 
 
+async def handle_waterreminder(user_id, interaction=None, ctx=None):
+    """Shared handler for water reminder commands."""
+    user_id = str(user_id)
+    if user_id in reminders:
+        del reminders[user_id]
+        save_reminders(reminders)
+        message = "💧 You've unsubscribed from water reminders."
+        logging.info(f"User {user_id} unsubscribed from water reminders.")
+    else:
+        reminders[user_id] = {"subscribed": True}
+        save_reminders(reminders)
+        message = "💧 You've subscribed to hourly water reminders! Stay hydrated! 💪"
+        logging.info(f"User {user_id} subscribed to water reminders.")
+
+    if interaction:
+        await interaction.response.send_message(message)
+    elif ctx:
+        await ctx.send(message)
+
+
 @bot.command()
 async def waterreminder(ctx):
     """Subscribe to hourly water reminders. Usage: !waterreminder"""
-    user_id = ctx.author.id
-    if user_id in WATER_REMINDER_USERS:
-        WATER_REMINDER_USERS.discard(user_id)
-        await ctx.send("💧 You've unsubscribed from water reminders.")
-    else:
-        WATER_REMINDER_USERS.add(user_id)
-        await ctx.send("💧 You've subscribed to hourly water reminders! Stay hydrated! 💪")
+    await handle_waterreminder(ctx.author.id, ctx=ctx)
 
 
 @bot.tree.command(name="waterreminder")
 async def slash_waterreminder(interaction: discord.Interaction):
     """Subscribe to hourly water reminders."""
-    user_id = interaction.user.id
-    if user_id in WATER_REMINDER_USERS:
-        WATER_REMINDER_USERS.discard(user_id)
-        await interaction.response.send_message("💧 You've unsubscribed from water reminders.")
-    else:
-        WATER_REMINDER_USERS.add(user_id)
-        await interaction.response.send_message("💧 You've subscribed to hourly water reminders! Stay hydrated! 💪")
+    await handle_waterreminder(interaction.user.id, interaction=interaction)
 
 
 @bot.command()
@@ -534,7 +542,7 @@ async def about(ctx):
     )
     embed.add_field(
         name="Commands",
-        value="`!quote` • `!roll NdM` • `!ping` • `!remind` • `!waterreminder` • `!purge` • `!announce`",
+        value="`!quote` • `!roll NdM` • `!ping` • `!remind` • `!waterreminder` • `!purge` • `!announce` • `!stats` • `!leaderboard` • `!health`",
         inline=False
     )
     embed.add_field(
@@ -561,7 +569,7 @@ async def slash_about(interaction: discord.Interaction):
     )
     embed.add_field(
         name="Commands",
-        value="`/quote` • `/roll` • `/ping` • `/remind` • `/waterreminder` • `/purge` • `/announce`",
+        value="`/quote` • `/roll` • `/ping` • `/remind` • `/waterreminder` • `/purge` • `/announce` • `/stats` • `/leaderboard` • `/health`",
         inline=False
     )
     embed.add_field(
@@ -617,6 +625,13 @@ async def slash_help(interaction: discord.Interaction):
               "`/help` - This message",
         inline=False
     )
+    embed.add_field(
+        name="📊 **Stats & Health**",
+        value="`/stats` - View your reminder stats\n"
+              "`/leaderboard` - See top streaks\n"
+              "`/health` - Bot status (owner only)",
+        inline=False
+    )
     
     embed.set_footer(text="Both prefix (!) and slash (/) commands work!")
     await interaction.response.send_message(embed=embed)
@@ -638,87 +653,95 @@ async def slash_motivate(interaction: discord.Interaction):
 
 
 @bot.command()
-async def workout(ctx):
-    """Get a quick workout suggestion."""
-    suggestion = random.choice(WORKOUT_IDEAS)
-    embed = discord.Embed(
-        title="💪 Quick Workout Suggestion",
-        description=suggestion,
-        color=discord.Color.red()
-    )
-    embed.set_footer(text="Get moving! Your body will thank you! 🏃")
-    await ctx.send(embed=embed)
+async def workout(ctx, difficulty: str = None):
+    """Get a workout suggestion. Usage: !workout [difficulty]"""
+    workouts = {
+        "easy": ["10 push-ups", "15 squats", "20 jumping jacks"],
+        "medium": ["20 push-ups", "30 squats", "1-minute plank"],
+        "hard": ["30 push-ups", "50 squats", "2-minute plank"]
+    }
 
+    if difficulty and difficulty.lower() in workouts:
+        suggestion = random.choice(workouts[difficulty.lower()])
+        await ctx.send(f"💪 {difficulty.capitalize()} workout: {suggestion}")
+    else:
+        all_workouts = [item for sublist in workouts.values() for item in sublist]
+        suggestion = random.choice(all_workouts)
+        await ctx.send(f"💪 Random workout: {suggestion}")
 
-@bot.tree.command(name="workout")
-async def slash_workout(interaction: discord.Interaction):
-    """Get a quick workout suggestion."""
-    suggestion = random.choice(WORKOUT_IDEAS)
-    embed = discord.Embed(
-        title="💪 Quick Workout Suggestion",
-        description=suggestion,
-        color=discord.Color.red()
-    )
-    embed.set_footer(text="Get moving! Your body will thank you! 🏃")
-    await interaction.response.send_message(embed=embed)
+@bot.command()
+async def tip(ctx, theme: str = None):
+    """Get a wellness tip. Usage: !tip [theme]"""
+    tips = {
+        "hydration": ["Drink a glass of water every hour.", "Carry a reusable water bottle."],
+        "mindfulness": ["Take 5 deep breaths.", "Spend 5 minutes meditating."],
+        "fitness": ["Stretch for 5 minutes.", "Take a short walk."]
+    }
+
+    if theme and theme.lower() in tips:
+        suggestion = random.choice(tips[theme.lower()])
+        await ctx.send(f"🌟 {theme.capitalize()} tip: {suggestion}")
+    else:
+        all_tips = [item for sublist in tips.values() for item in sublist]
+        suggestion = random.choice(all_tips)
+        await ctx.send(f"🌟 Random tip: {suggestion}")
 
 
 @bot.command()
-async def breathing(ctx):
-    """Get a guided breathing exercise."""
-    exercise = random.choice(BREATHING_EXERCISES)
-    embed = discord.Embed(
-        title="🌬️ Breathing Exercise",
-        description=exercise,
-        color=discord.Color.blurple()
-    )
-    embed.set_footer(text="Take your time. Breathing is the foundation of calm.")
-    await ctx.send(embed=embed)
+async def stats(ctx):
+    """Show user engagement stats. Usage: !stats"""
+    user_id = str(ctx.author.id)
+    user_data = reminders.get(user_id, {})
 
+    streak = user_data.get("streak", 0)
+    subscribed = "Yes" if user_data.get("subscribed") else "No"
 
-@bot.tree.command(name="breathing")
-async def slash_breathing(interaction: discord.Interaction):
-    """Get a guided breathing exercise."""
-    exercise = random.choice(BREATHING_EXERCISES)
-    embed = discord.Embed(
-        title="🌬️ Breathing Exercise",
-        description=exercise,
-        color=discord.Color.blurple()
+    await ctx.send(
+        f"📊 **Your Stats:**\n"
+        f"- Subscribed to reminders: {subscribed}\n"
+        f"- Current streak: {streak} days"
     )
-    embed.set_footer(text="Take your time. Breathing is the foundation of calm.")
-    await interaction.response.send_message(embed=embed)
+
+@bot.command()
+async def leaderboard(ctx):
+    """Show top users by streak. Usage: !leaderboard"""
+    sorted_users = sorted(
+        reminders.items(), key=lambda x: x[1].get("streak", 0), reverse=True
+    )
+    top_users = sorted_users[:10]
+
+    leaderboard = "\n".join(
+        [f"{i+1}. <@{user_id}> - {data.get('streak', 0)} days" for i, (user_id, data) in enumerate(top_users)]
+    )
+
+    await ctx.send(f"🏆 **Leaderboard:**\n{leaderboard}")
 
 
 @bot.command()
-async def tip(ctx):
-    """Get a daily wellness tip."""
-    wellness_tip = random.choice(WELLNESS_TIPS)
-    embed = discord.Embed(
-        title="💚 Daily Wellness Tip",
-        description=wellness_tip,
-        color=discord.Color.green()
-    )
-    embed.set_footer(text="Small changes lead to big health improvements!")
+@commands.is_owner()
+async def health(ctx):
+    """Check the bot's health and status. Usage: !health"""
+    uptime = datetime.now() - bot.launch_time
+    active_reminders = len(reminders)
+
+    embed = discord.Embed(title="Bot Health Check", color=0x00ff00)
+    embed.add_field(name="Uptime", value=str(uptime).split('.')[0], inline=False)
+    embed.add_field(name="Active Reminders", value=str(active_reminders), inline=False)
+    embed.add_field(name="Memory Usage", value=f"{psutil.virtual_memory().percent}%", inline=False)
+
     await ctx.send(embed=embed)
 
-
-@bot.tree.command(name="tip")
-async def slash_tip(interaction: discord.Interaction):
-    """Get a daily wellness tip."""
-    wellness_tip = random.choice(WELLNESS_TIPS)
-    embed = discord.Embed(
-        title="💚 Daily Wellness Tip",
-        description=wellness_tip,
-        color=discord.Color.green()
-    )
-    embed.set_footer(text="Small changes lead to big health improvements!")
-    await interaction.response.send_message(embed=embed)
+# Track bot launch time
+bot.launch_time = datetime.now()
 
 
-
-
+# entrypoint when executed as a script; keeps behaviour consistent with
+# prior versions which simply invoked `bot.run()` at module level. Having a
+# guard also allows import‑time unit tests or linting without side effects.
 if __name__ == "__main__":
-    if not TOKEN:
-        print("DISCORD_TOKEN not set — create a .env with DISCORD_TOKEN and run again.")
-        raise SystemExit(1)
-    bot.run(TOKEN)
+    # run() will block until the bot exits; any exception will be logged
+    try:
+        bot.run(TOKEN)
+    except Exception as e:
+        logging.error(f"Failed to start Ron Bot: {e}")
+        raise

@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [v2.5.0] - 2026-02-27
+- User-facing stats commands: `stats` and `leaderboard`.
+- Owner-only `health` command for uptime/memory information.
+- Help/about embeds and README/man page updated with new commands and descriptions.
+- Improved startup handling:
+  - added `if __name__ == "__main__"` guard and error logging.
+  - django `dotenv` import now reports a friendly message if the package is
+    missing.
+- Launcher scripts (`run.sh` / `run_ron.sh`) now explicitly invoke the
+  virtualenv Python to avoid ModuleNotFoundError crashes.
+- Added consistency and minor cleanup across docs and scripts.
+
 ## [v2.0.0] - 2026-02-10
 - Removed the weather feature and associated API usage to focus on wellness and moderation.
 - Expanded wellness content:
